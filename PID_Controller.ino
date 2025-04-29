@@ -1,49 +1,36 @@
 #include <BleKeyboard.h>
 
-// ==== BLE Setup ====
 BleKeyboard bleKeyboard("ESP32 Controller", "Manufacturer", 100);
 
-// ==== Pin Definitions ====
-const uint8_t BUTTON_PINS[] = {15, 18, 4, 5};  // Q, Z, D, S
+// Broches
+const uint8_t BUTTON_PINS[] = {15, 18, 4, 5}; // Q, Z, D, S
 #define JOYSTICK_X_PIN 35
-#define JOYSTICK_Y_PIN 34
 #define JOYSTICK_BTN_PIN 12  // Spacebar
 
-// ==== Joystick Configuration ====
-#define ANALOG_MAX 4095      // ESP32 ADC resolution
-#define CENTER_X 2000        // Calibrate these values
-#define CENTER_Y 2000
-#define DEADZONE 300
+// Configuration joystick
+#define CENTER_X 2000        // À calibrer avec les vraies valeurs
+#define DEADZONE 1500         // Sensibilité
 #define SAMPLE_COUNT 5
-#define POLL_RATE 20         // 50Hz (20ms)
+#define POLL_RATE 20         // 50Hz
 
-// ==== Key Mappings ===-
+// dsssawdsawdsssTouches
 const char BUTTON_KEYS[] = {'q', 'z', 'd', 's'};
-const uint8_t ARROW_KEYS[] = {
-  KEY_UP_ARROW,
-  KEY_DOWN_ARROW,
-  KEY_LEFT_ARROW,
-  KEY_RIGHT_ARROW
-};
 
-// ==== State Tracking ====
+// États
 bool buttonStates[4] = {HIGH, HIGH, HIGH, HIGH};
-bool lastJoyButtonState = HIGH;
-bool currentArrows[4] = {false};  // UP, DOWN, LEFT, RIGHT
-unsigned long lastJoystickRead = 0;
+bool leftPressed = false;
+bool rightPressed = false;
 
 void setup() {
   Serial.begin(115200);
   
-  // Initialize inputs
   for (uint8_t i = 0; i < 4; i++) {
     pinMode(BUTTON_PINS[i], INPUT_PULLUP);
   }
   pinMode(JOYSTICK_BTN_PIN, INPUT_PULLUP);
-
-  // Start BLE
+  
   bleKeyboard.begin();
-  Serial.println("Waiting for BLE connection...");
+  Serial.println("En attente de connexion BLE...");
 }
 
 void loop() {
@@ -54,7 +41,6 @@ void loop() {
 
   handleButtons();
   handleJoystick();
-  
 }
 
 void handleButtons() {
@@ -73,41 +59,34 @@ void handleButtons() {
 }
 
 void handleJoystick() {
-  if (millis() - lastJoystickRead < POLL_RATE) return;
+  static unsigned long lastRead = 0;
+  if (millis() - lastRead < POLL_RATE) return;
   
-  // Read averaged values
   int xVal = readAverage(JOYSTICK_X_PIN, SAMPLE_COUNT);
-  int yVal = readAverage(JOYSTICK_Y_PIN, SAMPLE_COUNT);
-  
-  bool newArrows[4] = {false};
-  
-  // Horizontal axis
-  if (xVal < CENTER_X - DEADZONE) {
-    newArrows[3] = true;  // LEFT
-  } else if (xVal > CENTER_X + DEADZONE) {
-    newArrows[2] = true;  // RIGHT
-  }
-  
-  // Vertical axis (invert if needed)
-  if (yVal < CENTER_Y - DEADZONE) {
-    newArrows[0] = true;  // UP
-  } else if (yVal > CENTER_Y + DEADZONE) {
-    newArrows[1] = true;  // DOWN
-  }
 
-  // Update arrow keys
-  for (uint8_t i = 0; i < 4; i++) {
-    if (newArrows[i] != currentArrows[i]) {
-      if (newArrows[i]) {
-        bleKeyboard.press(ARROW_KEYS[i]);
-      } else {
-        bleKeyboard.release(ARROW_KEYS[i]);
-      }
-      currentArrows[i] = newArrows[i];
+  // Gestion gauche
+  if (xVal < (CENTER_X - DEADZONE)) {
+    if (!leftPressed) {
+      bleKeyboard.press(KEY_RIGHT_ARROW);
+      leftPressed = true;
     }
+  } else if (leftPressed) {
+    bleKeyboard.release(KEY_RIGHT_ARROW);
+    leftPressed = false;
   }
 
-  lastJoystickRead = millis();
+  // Gestion droite
+  if (xVal > (CENTER_X + DEADZONE)) {
+    if (!rightPressed) {
+      bleKeyboard.press(KEY_LEFT_ARROW);
+      rightPressed = true;
+    }
+  } else if (rightPressed) {
+    bleKeyboard.release(KEY_LEFT_ARROW);
+    rightPressed = false;
+  }
+
+  lastRead = millis();
 }
 
 int readAverage(int pin, int samples) {
