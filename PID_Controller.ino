@@ -67,22 +67,22 @@ void handleJoystick() {
   // Gestion gauche
   if (xVal < (CENTER_X - DEADZONE)) {
     if (!leftPressed) {
-      bleKeyboard.press(KEY_RIGHT_ARROW);
+      bleKeyboard.press(KEY_LEFT_ARROW);
       leftPressed = true;
     }
   } else if (leftPressed) {
-    bleKeyboard.release(KEY_RIGHT_ARROW);
+    bleKeyboard.release(KEY_LEFT_ARROW);
     leftPressed = false;
   }
 
   // Gestion droite
   if (xVal > (CENTER_X + DEADZONE)) {
     if (!rightPressed) {
-      bleKeyboard.press(KEY_LEFT_ARROW);
+      bleKeyboard.press(KEY_RIGHT_ARROW);
       rightPressed = true;
     }
   } else if (rightPressed) {
-    bleKeyboard.release(KEY_LEFT_ARROW);
+    bleKeyboard.release(KEY_RIGHT_ARROW);
     rightPressed = false;
   }
 
